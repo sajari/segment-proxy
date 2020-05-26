@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"net/http"
@@ -9,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gorilla/handlers"
+	tlog "code.sajari.com/telem/log"
 )
 
 // singleJoiningSlash is copied from httputil.singleJoiningSlash method.
@@ -57,7 +58,16 @@ func NewSegmentReverseProxy(cdn *url.URL, trackingAPI *url.URL) http.Handler {
 }
 
 var port = flag.String("port", "8080", "bind address")
-var debug = flag.Bool("debug", false, "debug mode")
+
+const (
+	ProjectIDEnv = "PROJECT_ID"
+	PortEnv      = "PORT"
+)
+
+var (
+	ProjectID = os.Getenv(ProjectIDEnv)
+	Port      = os.Getenv(PortEnv)
+)
 
 func main() {
 	flag.Parse()
@@ -70,10 +80,21 @@ func main() {
 		log.Fatal(err)
 	}
 	proxy := NewSegmentReverseProxy(cdnURL, trackingAPIURL)
-	if *debug {
-		proxy = handlers.LoggingHandler(os.Stdout, proxy)
-		log.Printf("serving proxy at port %v\n", *port)
+
+	lc, err := tlog.NewClient(context.Background(), ProjectID)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	log.Fatal(http.ListenAndServe(":"+*port, proxy))
+	handler := &tlog.HTTPHandler{
+		Client:  lc,
+		Handler: proxy,
+	}
+
+	listen := Port
+	if listen == "" {
+		listen = "8080"
+	}
+	log.Printf("serving segment proxy on port %v\n", listen)
+	log.Fatal(http.ListenAndServe(":"+listen, handler))
 }

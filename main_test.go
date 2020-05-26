@@ -25,6 +25,8 @@ func TestSegmentReverseProxy(t *testing.T) {
 		{"/analytics.js/v1", CDN},
 		{"/v1/import", TrackingAPI},
 		{"/v1/pixel", TrackingAPI},
+		{"/v1/p", TrackingAPI},
+		{"/v1/m", TrackingAPI},
 	}
 	for _, c := range cases {
 		cdn := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
