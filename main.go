@@ -1,16 +1,12 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"strings"
-
-	tlog "code.sajari.com/telem/log"
 )
 
 // singleJoiningSlash is copied from httputil.singleJoiningSlash method.
@@ -57,10 +53,9 @@ func NewSegmentReverseProxy(cdn *url.URL, trackingAPI *url.URL) http.Handler {
 	return &httputil.ReverseProxy{Director: director}
 }
 
-var port = flag.String("port", "8080", "bind address")
-
+// Environment Variables provided by the AppEngine go1.12+ runtime.
 const (
-	ProjectIDEnv = "PROJECT_ID"
+	ProjectIDEnv = "GOOGLE_CLOUD_PROJECT"
 	PortEnv      = "PORT"
 )
 
@@ -70,7 +65,6 @@ var (
 )
 
 func main() {
-	flag.Parse()
 	cdnURL, err := url.Parse("https://cdn.segment.com")
 	if err != nil {
 		log.Fatal(err)
@@ -81,20 +75,10 @@ func main() {
 	}
 	proxy := NewSegmentReverseProxy(cdnURL, trackingAPIURL)
 
-	lc, err := tlog.NewClient(context.Background(), ProjectID)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	handler := &tlog.HTTPHandler{
-		Client:  lc,
-		Handler: proxy,
-	}
-
 	listen := Port
 	if listen == "" {
 		listen = "8080"
 	}
 	log.Printf("serving segment proxy on port %v\n", listen)
-	log.Fatal(http.ListenAndServe(":"+listen, handler))
+	log.Fatal(http.ListenAndServe(":"+listen, proxy))
 }

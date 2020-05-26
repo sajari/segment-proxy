@@ -1,0 +1,7 @@
+service: segment-proxy
+runtime: go113
+
+handlers:
+  - url: /.*
+    script: auto
+    secure: always
